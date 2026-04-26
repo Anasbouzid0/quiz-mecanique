@@ -1,76 +1,129 @@
 import streamlit as st
 
 # Configuration de la page
-st.set_page_config(page_title="Quiz Mécanique 2BAC - Prof Anas", page_icon="🧪")
+st.set_page_config(page_title="Quiz Mécanique Pro - Prof Anas", page_icon="🎓")
 
-st.title("🧪 Diagnostic Mécanique : 2ème BAC")
-st.write("Ce questionnaire contient 10 questions pour évaluer tes connaissances.")
+# --- INITIALISATION DES VARIABLES (SESSION STATE) ---
+if 'question_index' not in st.session_state:
+    st.session_state.question_index = 0
+if 'responses' not in st.session_state:
+    st.session_state.responses = {}
 
-# --- DÉBUT DU QUIZ ---
-questions = []
+# --- DONNÉES DU QUIZ ---
+questions_data = [
+    {
+        "q": "Quelle est l'expression du vecteur vitesse si $\\vec{OM} = 4t \\cdot \\vec{i} + 2 \\cdot \\vec{j}$ ?",
+        "options": ["v = 4 m/s", "v = 2 m/s", "v = 4t m/s"],
+        "answer": "v = 4 m/s"
+    },
+    {
+        "q": "Si le mouvement est rectiligne uniforme, l'accélération est :",
+        "options": ["Positive", "Nulle", "Négative"],
+        "answer": "Nulle"
+    },
+    {
+        "q": "La deuxième loi de Newton s'énonce :",
+        "options": ["ΣF = m.v", "ΣF = 0", "ΣF = m.a"],
+        "answer": "ΣF = m.a"
+    },
+    {
+        "q": "L'unité de la constante de raideur K d'un ressort est :",
+        "options": ["N.m", "N/m", "kg.m/s"],
+        "answer": "N/m"
+    },
+    {
+        "q": "Dans le repère de Frénet, l'accélération normale est $a_n = $ :",
+        "options": ["dv/dt", "v²/R", "R/v²"],
+        "answer": "v²/R"
+    },
+    {
+        "q": "Le travail d'une force constante lors d'un déplacement AB est :",
+        "options": ["F.AB.cos(α)", "F.AB.sin(α)", "F/AB"],
+        "answer": "F.AB.cos(α)"
+    },
+    {
+        "q": "L'énergie cinétique d'un solide en translation est :",
+        "options": ["m.v²", "½.m.v²", "m.g.h"],
+        "answer": "½.m.v²"
+    },
+    {
+        "q": "En chute libre, on néglige :",
+        "options": ["Le poids", "La poussée d'Archimède et l'air", "La masse"],
+        "answer": "La poussée d'Archimède et l'air"
+    },
+    {
+        "q": "Un référentiel lié à la Terre est considéré comme :",
+        "options": ["Toujours galiléen", "Approximativement galiléen", "Non-galiléen"],
+        "answer": "Approximativement galiléen"
+    },
+    {
+        "q": "La période T d'un pendule pesant dépend de :",
+        "options": ["La masse seulement", "La longueur et g", "La vitesse initiale"],
+        "answer": "La longueur et g"
+    }
+]
 
-# Q1
-st.markdown("#### 1. Cinématique : Vecteur Vitesse")
-st.latex(r"\vec{OM} = 4t \cdot \vec{i} + 2 \cdot \vec{j}")
-q1 = st.radio("Quelle est la valeur de la vitesse v ?", ["v = 4 m/s", "v = 2 m/s", "v = 4t m/s"], index=None, key="q1")
+# --- INTERFACE ---
+st.title("🚀 Quiz Interactif : Mécanique 2BAC")
+st.sidebar.title(f"👨‍🏫 Prof : Anas Bouzid")
+st.sidebar.write("Lycée IBN Batouta")
 
-# Q2
-st.markdown("#### 2. Accélération")
-q2 = st.radio("Si la vitesse est constante, l'accélération est :", ["Positive", "Nulle", "Négative"], index=None, key="q2")
+# Barre de progression
+progress = (st.session_state.question_index + 1) / len(questions_data)
+st.progress(progress)
+st.write(f"**Question {st.session_state.question_index + 1} sur {len(questions_data)}**")
 
-# Q3
-st.markdown("#### 3. Lois de Newton")
-q3 = st.radio("La deuxième loi de Newton s'applique dans un référentiel :", ["Accéléré", "Tournant", "Galiléen"], index=None, key="q3")
+# Affichage de la question actuelle
+current_q = questions_data[st.session_state.question_index]
+st.markdown(f"### {current_q['q']}")
 
-# Q4
-st.markdown("#### 4. Unités")
-q4 = st.radio("Quelle est l'unité de la force dans le Système International ?", ["Joule (J)", "Newton (N)", "Watt (W)"], index=None, key="q4")
+# Récupérer la réponse déjà donnée si elle existe
+default_val = st.session_state.responses.get(st.session_state.question_index, None)
 
-# Q5
-st.markdown("#### 5. Repère de Frénet")
-q5 = st.radio("L'accélération normale a_n est liée à :", ["Le changement de valeur de la vitesse", "Le changement de direction du mouvement", "La masse du corps"], index=None, key="q5")
+choice = st.radio("Choisis ta réponse :", current_q['options'], index=current_q['options'].index(default_val) if default_val else None, key=f"radio_{st.session_state.question_index}")
 
-# Q6
-st.markdown("#### 6. Chute libre")
-q6 = st.radio("En chute libre sans frottement, l'accélération est égale à :", ["g (intensité de pesanteur)", "0", "La vitesse initiale"], index=None, key="q6")
+# Enregistrer la réponse
+if choice:
+    st.session_state.responses[st.session_state.question_index] = choice
 
-# Q7
-st.markdown("#### 7. Énergie Cinétique")
-q7 = st.radio("Si la vitesse est multipliée par 3, l'énergie cinétique est multipliée par :", ["3", "6", "9"], index=None, key="q7")
+# --- BOUTONS DE NAVIGATION ---
+col1, col2 = st.columns([1, 1])
 
-# Q8
-st.markdown("#### 8. Plan incliné")
-q8 = st.radio("Sur un plan incliné d'angle α sans frottement, l'accélération est :", ["a = g", "a = g * sin(α)", "a = 0"], index=None, key="q8")
+with col1:
+    if st.session_state.question_index > 0:
+        if st.button("⬅️ Précédent"):
+            st.session_state.question_index -= 1
+            st.rerun()
 
-# Q9
-st.markdown("#### 9. Ressorts")
-q9 = st.radio("La force de rappel d'un ressort est proportionnelle à :", ["Sa masse", "Son allongement ΔL", "Sa vitesse"], index=None, key="q9")
-
-# Q10
-st.markdown("#### 10. Travail d'une force")
-q10 = st.radio("Le travail d'une force perpendiculaire au déplacement est :", ["Positif", "Nul", "Moteur"], index=None, key="q10")
-
-# --- CORRECTION ET SCORE ---
-if st.button("Afficher mon score final"):
-    resp = [q1, q2, q3, q4, q5, q6, q7, q8, q9, q10]
-    if None in resp:
-        st.error("Réponds à toutes les questions avant de valider !")
+with col2:
+    if st.session_state.question_index < len(questions_data) - 1:
+        if st.button("Suivant ➡️"):
+            st.session_state.question_index += 1
+            st.rerun()
     else:
-        score = 0
-        if q1 == "v = 4 m/s": score += 1
-        if q2 == "Nulle": score += 1
-        if q3 == "Galiléen": score += 1
-        if q4 == "Newton (N)": score += 1
-        if q5 == "Le changement de direction du mouvement": score += 1
-        if q6 == "g (intensité de pesanteur)": score += 1
-        if q7 == "9": score += 1
-        if q8 == "a = g * sin(α)": score += 1
-        if q9 == "Son allongement ΔL": score += 1
-        if q10 == "Nul": score += 1
-        
-        st.success(f"### Score : {score}/10")
-        if score < 5: st.warning("Besoin d'un gros rappel des bases !")
-        elif score < 8: st.info("Bonnes bases, mais attention aux détails.")
-        else: st.balloons(); st.write("Bravo ! Niveau excellent.")
+        if st.button("🎯 Terminer le Quiz"):
+            st.session_state.finished = True
 
-st.sidebar.write("Enseignant : **Anas Bouzid**")
+# --- RÉSULTATS FINAUX ---
+if 'finished' in st.session_state:
+    st.divider()
+    score = 0
+    for i, q in enumerate(questions_data):
+        if st.session_state.responses.get(i) == q['answer']:
+            score += 1
+    
+    st.balloons()
+    st.success(f"### Score Final : {score} / {len(questions_data)}")
+    
+    if score >= 8:
+        st.write("Excellent ! Tu es prêt pour le Bac.")
+    elif score >= 5:
+        st.write("C'est bien, mais revois tes formules de base.")
+    else:
+        st.write("Il y a encore du travail. On va reprendre ça ensemble !")
+    
+    if st.button("Recommencer 🔄"):
+        st.session_state.question_index = 0
+        st.session_state.responses = {}
+        del st.session_state.finished
+        st.rerun()
