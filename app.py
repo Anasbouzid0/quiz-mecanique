@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import matplotlib.transforms as transforms # <-- L'import manquant est ici
 
 # --- Configuration de la page ---
 st.set_page_config(page_title="Simulation 2ème Loi de Newton", layout="wide")
@@ -29,12 +30,12 @@ P_x = m * g * np.sin(alpha_rad) # Composante motrice
 P_y = m * g * np.cos(alpha_rad) # Composante normale
 
 Rn_mag = P_y                    # Équilibre sur l'axe y
-f_mag = mu * Rn_mag             # Force de frottement cinétique
+f_mag = mu * Rn_mag             # Intensité de la force de frottement cinétique
 
 # 2ème loi de Newton (Axe x) : P_x - f = m * a
 F_res = P_x - f_mag
 
-# L'accélération ne peut pas être négative si le bloc part du repos (il ne remonte pas)
+# L'accélération ne peut pas être négative si le bloc part du repos
 if F_res > 0:
     a = F_res / m
 else:
@@ -71,7 +72,6 @@ with col_graph:
     
     # Géométrie du plan
     longueur_plan = 25.0
-    # On place l'origine (0,0) en bas du plan
     x_haut = 0
     y_haut = longueur_plan * np.sin(alpha_rad)
     x_bas = longueur_plan * np.cos(alpha_rad)
@@ -79,52 +79,51 @@ with col_graph:
     
     # Tracer le plan
     ax.plot([x_haut, x_bas], [y_haut, y_bas], 'k-', lw=3, label="Plan incliné")
-    ax.plot([x_haut, x_haut], [y_haut, 0], 'k--', lw=1) # Hauteur
-    ax.plot([x_haut, x_bas], [0, 0], 'k--', lw=1)       # Base
+    ax.plot([x_haut, x_haut], [y_haut, 0], 'k--', lw=1)
+    ax.plot([x_haut, x_bas], [0, 0], 'k--', lw=1)
     
     # Géométrie du solide
     cote_bloc = 2.0
-    # Position du centre du bloc
     x_c = distance * np.cos(alpha_rad) + (cote_bloc/2) * np.sin(alpha_rad)
     y_c = y_haut - distance * np.sin(alpha_rad) + (cote_bloc/2) * np.cos(alpha_rad)
     
-    # Vérifier que le bloc ne dépasse pas le plan
+    # Arrêter le bloc en bas du plan
     if distance > longueur_plan:
         x_c = x_bas + (cote_bloc/2) * np.sin(alpha_rad)
         y_c = y_bas + (cote_bloc/2) * np.cos(alpha_rad)
         st.warning("Le solide a atteint le bas du plan !")
 
-    # Dessiner le solide (rectangle tourné)
+    # Dessiner le solide
     rect = patches.Rectangle(
         (x_c - cote_bloc/2, y_c - cote_bloc/2), cote_bloc, cote_bloc,
         angle=np.degrees(-alpha_rad),
         color='royalblue', alpha=0.7, label="Solide"
     )
-    # Appliquer la rotation autour du centre
+    
+    # Application de la rotation via la librairie correctement importée
     t_start = ax.transData
-    t_rot = matplotlib.transforms.Affine2D().rotate_deg_around(x_c, y_c, -alpha_deg)
+    t_rot = transforms.Affine2D().rotate_deg_around(x_c, y_c, -alpha_deg)
     rect.set_transform(t_rot + t_start)
     ax.add_patch(rect)
     
-    # Centre de gravité
+    # Centre d'inertie
     ax.plot(x_c, y_c, 'ro', markersize=5)
     
     # --- Tracé des vecteurs forces ---
-    échelle = 0.15 # Facteur d'échelle pour l'affichage des vecteurs
+    échelle = 0.15 
     
     # Vecteur Poids (P) - strictement vers le bas
     ax.quiver(x_c, y_c, 0, -P_mag * échelle, angles='xy', scale_units='xy', scale=1, color='green', width=0.008, label="Poids (P)")
     
-    # Vecteur Réaction Normale (Rn) - perpendiculaire au plan
+    # Vecteur Réaction Normale (Rn)
     Rn_dx = Rn_mag * np.sin(alpha_rad) * échelle
     Rn_dy = Rn_mag * np.cos(alpha_rad) * échelle
     ax.quiver(x_c, y_c, Rn_dx, Rn_dy, angles='xy', scale_units='xy', scale=1, color='red', width=0.008, label="Réaction (Rn)")
     
-    # Vecteur Frottement (f) - opposé au mouvement
+    # Vecteur Frottement (f)
     if f_mag > 0:
         f_dx = -f_mag * np.cos(alpha_rad) * échelle
         f_dy = f_mag * np.sin(alpha_rad) * échelle
-        # Point d'application de f (souvent mis au centre pour la clarté pédagogique du diagramme)
         ax.quiver(x_c, y_c, f_dx, f_dy, angles='xy', scale_units='xy', scale=1, color='orange', width=0.008, label="Frottements (f)")
 
     # Paramètres du graphique
@@ -133,6 +132,6 @@ with col_graph:
     ax.set_ylim(-2, longueur_plan + 2)
     ax.set_title(f"Simulation à t = {t:.1f} s")
     ax.legend(loc="upper right")
-    ax.axis('off') # On cache les axes pour un rendu plus propre
+    ax.axis('off') 
     
     st.pyplot(fig)
