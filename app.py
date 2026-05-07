@@ -2,172 +2,122 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 
-# --- CONFIGURATION DE LA PAGE ---
-st.set_page_config(
-    page_title="Étude du Champ Magnétique - Fil Rectiligne",
-    page_icon="🧲",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# --- 1. CONFIGURATION ET ESTHÉTIQUE ---
+st.set_page_config(page_title="Le Champ Magnétique", page_icon="🧲", layout="wide")
 
-# --- CONSTANTES PHYSIQUES ---
-MU_0 = 4 * np.pi * 1e-7  # Perméabilité magnétique du vide (T.m/A)
-B_TERRE = 2e-5           # Composante horizontale du champ terrestre (~20 µT)
+# Constantes physiques
+MU_0 = 4 * np.pi * 1e-7
+B_TERRE = 2e-5
 
-# --- EN-TÊTE PÉDAGOGIQUE ---
-st.title("🧲 Le champ magnétique créé par un courant électrique")
 st.markdown("""
-**Niveau :** 1ère BAC BIOF | **Séquence :** Le fil conducteur rectiligne
-*Application interactive conçue pour l'exploration de la topographie et de l'intensité du champ magnétique $\\vec{B}$.*
-""")
-st.divider()
+<div style='background-color: #2980b9; padding: 15px; border-radius: 5px;'>
+    <h1 style='color: white; margin:0;'>🧲 Le Champ Magnétique créé par un courant électrique</h1>
+    <p style='color: white; margin:0; font-size: 18px;'>Physique-Chimie | 1ère BAC BIOF | Lycée Ibn Batouta | Enseignant : Anas BOUZID</p>
+</div>
+""", unsafe_allow_html=True)
+st.write("") # Espace
 
-# --- BARRE LATÉRALE : PARAMÈTRES GLOBAUX ---
+# --- 2. BARRE LATÉRALE (CONTRÔLES GLOBAUX) ---
 with st.sidebar:
-    st.header("⚙️ Paramètres du Système")
-    st.markdown("Ajustez les grandeurs physiques du circuit :")
-    I = st.slider("Intensité du courant I (A)", min_value=-30.0, max_value=30.0, value=15.0, step=0.5)
-    d_cm = st.slider("Distance de mesure d (cm)", min_value=1.0, max_value=20.0, value=5.0, step=0.5)
-    d_m = d_cm / 100.0  # Conversion SI
+    st.header("⚙️ Paillasse Virtuelle")
+    st.markdown("Modifiez les paramètres de l'expérience :")
+    I = st.slider("Intensité du courant I (A)", min_value=-20.0, max_value=20.0, value=10.0, step=0.5)
+    d_cm = st.slider("Distance de la sonde d (cm)", min_value=1.0, max_value=15.0, value=4.0, step=0.5)
+    d_m = d_cm / 100.0
     
     st.divider()
-    st.subheader("📊 Teslamètre Virtuel")
+    st.subheader("📊 Teslamètre")
     B_calc = (MU_0 * abs(I)) / (2 * np.pi * d_m)
-    st.metric(label=f"Intensité de B à {d_cm} cm", value=f"{B_calc * 1e6:.1f} µT")
-    st.caption("Auteur : Anas BOUZID - Lycée Ibn Batouta")
+    st.metric(label=f"Valeur théorique à {d_cm} cm", value=f"{B_calc * 1e6:.1f} µT")
 
-# --- FONCTIONS DE SIMULATION ---
-# La gestion des figures est isolée pour éviter les conflits de mémoire Streamlit/Matplotlib
-
-def plot_oersted(I_val, distance_m):
-    """Génère la visualisation de l'expérience d'Oersted avec la boussole."""
-    fig, ax = plt.subplots(figsize=(6, 6))
+# --- 3. MOTEUR PHYSIQUE (Génération des graphiques) ---
+def tracer_oersted(I_val, dist_m):
+    fig, ax = plt.subplots(figsize=(5, 5))
+    # Fil conducteur
+    marker, color = ('o', 'red') if I_val > 0 else ('x', 'blue') if I_val < 0 else ('o', 'gray')
+    ax.plot(0, 0, marker=marker, color=color, markersize=20, markeredgewidth=2, label="Fil rectiligne")
     
-    marker = 'o' if I_val > 0 else 'x'
-    color = 'red' if I_val > 0 else 'blue'
-    if I_val == 0: marker, color = 'o', 'gray'
-    ax.plot(0, 0, marker=marker, color=color, markersize=18, markeredgewidth=2, label="Fil (Axe Z)")
-    
-    Bx_fil = 0
-    By_fil = (MU_0 * I_val) / (2 * np.pi * distance_m)
-    
-    Bx_res = Bx_fil
-    By_res = By_fil + B_TERRE
+    # Vecteurs B
+    Bx_fil, By_fil = 0, (MU_0 * I_val) / (2 * np.pi * dist_m)
+    Bx_res, By_res = Bx_fil, By_fil + B_TERRE
     
     norm = np.sqrt(Bx_res**2 + By_res**2)
-    dir_x, dir_y = (Bx_res/norm, By_res/norm) if norm > 0 else (0, 1)
+    dx, dy = (Bx_res/norm, By_res/norm) if norm > 0 else (0, 1)
     
-    L = 0.02
-    ax.quiver(distance_m, 0, dir_x, dir_y, color='red', scale=1, scale_units='xy', angles='xy', width=0.015, label="Pôle Nord")
-    ax.quiver(distance_m, 0, -dir_x, -dir_y, color='blue', scale=1, scale_units='xy', angles='xy', width=0.015, label="Pôle Sud")
-    ax.add_patch(plt.Circle((distance_m, 0), L*1.2, color='gray', fill=False, linestyle='--'))
+    # Boussole
+    ax.quiver(dist_m, 0, dx, dy, color='red', scale=1, scale_units='xy', angles='xy', width=0.015, label="Nord")
+    ax.quiver(dist_m, 0, -dx, -dy, color='blue', scale=1, scale_units='xy', angles='xy', width=0.015, label="Sud")
+    ax.add_patch(plt.Circle((dist_m, 0), 0.02, color='gray', fill=False, linestyle='--'))
     
-    ax.set_xlim(-0.1, max(0.1, distance_m + 0.05))
-    ax.set_ylim(-0.1, 0.1)
+    ax.set_xlim(-0.05, max(0.1, dist_m + 0.04))
+    ax.set_ylim(-0.05, 0.05)
     ax.set_aspect('equal')
-    ax.grid(True, linestyle=':', alpha=0.7)
-    ax.set_xlabel("x (m)")
-    ax.set_ylabel("y (m)")
-    ax.legend(loc='upper left')
+    ax.axis('off') # On cache les axes pour un rendu plus "schéma"
+    ax.legend(loc='upper right')
     return fig
 
-def plot_spectre(I_val):
-    """Génère la topographie du champ magnétique (Limaille de fer)."""
-    fig, ax = plt.subplots(figsize=(6, 6))
-    x = np.linspace(-0.1, 0.1, 40)
-    y = np.linspace(-0.1, 0.1, 40)
+def tracer_spectre(I_val):
+    fig, ax = plt.subplots(figsize=(5, 5))
+    x, y = np.linspace(-0.1, 0.1, 40), np.linspace(-0.1, 0.1, 40)
     X, Y = np.meshgrid(x, y)
     
-    r_carre = X**2 + Y**2
-    r_carre[r_carre == 0] = 1e-10 
-    
-    Bx = - (MU_0 * I_val / (2 * np.pi)) * (Y / r_carre)
-    By =   (MU_0 * I_val / (2 * np.pi)) * (X / r_carre)
+    r2 = X**2 + Y**2 + 1e-10
+    Bx, By = - (MU_0 * I_val / (2 * np.pi)) * (Y / r2), (MU_0 * I_val / (2 * np.pi)) * (X / r2)
     B_norm = np.sqrt(Bx**2 + By**2)
     
-    ax.streamplot(X, Y, Bx, By, color=B_norm, cmap='viridis', linewidth=1.5, density=1.5, arrowsize=1.5)
+    ax.streamplot(X, Y, Bx, By, color=B_norm, cmap='inferno', linewidth=1.5, density=1.2)
     
-    marker = 'o' if I_val > 0 else 'x'
-    color = 'red' if I_val > 0 else 'blue'
-    if I_val == 0: marker, color = 'o', 'gray'
+    marker, color = ('o', 'red') if I_val > 0 else ('x', 'blue') if I_val < 0 else ('o', 'gray')
     ax.plot(0, 0, marker=marker, color=color, markersize=15, markeredgewidth=2)
     
     ax.set_xlim(-0.1, 0.1)
     ax.set_ylim(-0.1, 0.1)
     ax.set_aspect('equal')
-    ax.grid(True, linestyle=':', alpha=0.7)
-    ax.set_xlabel("x (m)")
-    ax.set_ylabel("y (m)")
+    ax.axis('off')
     return fig
 
-def plot_quantitative():
-    """Génère les courbes d'analyse B=f(I) et B=f(1/d)."""
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-    
-    I_vals = np.linspace(0, 30, 100)
-    B_I_vals = (MU_0 * I_vals) / (2 * np.pi * 0.05) * 1e6 
-    ax1.plot(I_vals, B_I_vals, color='blue', linewidth=2)
-    ax1.set_title("Intensité du champ B en fonction de I")
-    ax1.set_xlabel("Courant I (A)")
-    ax1.set_ylabel("Champ B (µT)")
-    ax1.grid(True)
-    
-    d_vals = np.linspace(0.01, 0.20, 100)
-    inv_d = 1 / d_vals
-    B_d_vals = (MU_0 * 15.0) / (2 * np.pi * d_vals) * 1e6 
-    ax2.plot(inv_d, B_d_vals, color='red', linewidth=2)
-    ax2.set_title("Intensité du champ B en fonction de 1/d")
-    ax2.set_xlabel("1/d (m⁻¹)")
-    ax2.set_ylabel("Champ B (µT)")
-    ax2.grid(True)
-    
-    fig.tight_layout()
-    return fig
-
-# --- ORGANISATION EN ONGLETS ---
-tab1, tab2, tab3 = st.tabs(["🧭 1. Expérience d'Oersted", "🌌 2. Spectre Magnétique", "📈 3. Étude Quantitative"])
+# --- 4. SCÉNARIO PÉDAGOGIQUE (Onglets) ---
+st.markdown("### Étapes de l'activité expérimentale")
+tab1, tab2, tab3 = st.tabs(["1️⃣ L'Expérience d'Oersted", "2️⃣ Le Spectre Magnétique", "3️⃣ Loi de Biot et Savart"])
 
 with tab1:
+    st.subheader("Mise en évidence de l'influence magnétique")
     col1, col2 = st.columns([1, 1])
     with col1:
-        st.subheader("Observation de l'aiguille aimantée")
-        st.markdown("Placez une boussole à proximité d'un fil rectiligne aligné sur le méridien terrestre. Faites varier l'intensité $I$.")
-        fig_oersted = plot_oersted(I, d_m)
-        st.pyplot(fig_oersted)
+        st.markdown("**Protocole :** On place un fil rectiligne au-dessus d'une boussole (alignée sur le méridien Nord-Sud). On ferme le circuit électrique.")
+        fig1 = tracer_oersted(I, d_m)
+        st.pyplot(fig1)
+        plt.close(fig1)
     with col2:
-        st.subheader("Exploitation")
-        with st.expander("Q1. Que se passe-t-il lorsque le courant circule ?"):
-            st.write("L'aiguille pivote et tend à se placer perpendiculairement au fil conducteur.")
-        with st.expander("Q2. Quel est l'effet de l'inversion des bornes ?"):
-            st.write("Le sens du courant s'inverse ($I$ devient négatif), l'aiguille subit une rotation de 180°. Le sens de $\\vec{B}$ dépend du sens de $I$.")
-        st.info("💡 **Règle de la main droite :** Le pouce pointe dans le sens de $I$, les doigts s'enroulent dans le sens des lignes de champ.")
+        st.info("💡 **Consigne :** Modifiez l'intensité du courant dans le menu de gauche et observez l'aiguille.")
+        st.markdown("**Q1. Que se passe-t-il à la fermeture du circuit ?**")
+        st.success("L'aiguille pivote et tend à se placer perpendiculairement au fil.")
+        st.markdown("**Q2. Que se passe-t-il si on inverse les bornes du générateur ?**")
+        st.success("L'aiguille dévie, mais dans le sens diamétralement opposé. Le sens du champ dépend du sens du courant.")
 
 with tab2:
+    st.subheader("Topographie du vecteur champ magnétique")
     col1, col2 = st.columns([1, 1])
     with col1:
-        st.subheader("Topographie de $\\vec{B}$ (Limaille de fer)")
-        st.markdown("Visualisation dans un plan perpendiculaire au fil conducteur.")
-        fig_spectre = plot_spectre(I)
-        st.pyplot(fig_spectre)
+        fig2 = tracer_spectre(I)
+        st.pyplot(fig2)
+        plt.close(fig2)
     with col2:
-        st.subheader("Exploitation")
-        st.write("L'expérience de la limaille de fer permet de visualiser les lignes de champ.")
-        with st.expander("Analyse du spectre :"):
-            st.markdown("""
-            * **Forme :** Les lignes de champ sont des cercles concentriques centrés sur le fil.
-            * **Sens :** Donné par la règle du bonhomme d'Ampère ou du tire-bouchon de Maxwell.
-            * **Intensité du champ magnétique :** Plus les lignes sont resserrées, plus la valeur de $B$ est grande.
-            """)
+        st.markdown("**Protocole :** On saupoudre de la limaille de fer sur une plaque en plexiglas traversée par le fil.")
+        st.markdown("**Q3. Quelle est la forme des lignes de champ ?**")
+        st.success("La limaille dessine des cercles concentriques centrés sur le fil.")
+        st.markdown("**Règle de la main droite :**")
+        st.write("Le pouce suit le sens du courant $I$, les doigts courbés indiquent le sens de rotation des lignes de champ $\\vec{B}$.")
 
 with tab3:
-    st.subheader("Vérification de la loi de Biot et Savart")
-    st.markdown("L'utilisation d'une sonde de Hall permet d'établir les relations de proportionnalité.")
-    fig_quant = plot_quantitative()
-    st.pyplot(fig_quant)
+    st.subheader("Modélisation Mathématique")
+    st.markdown("L'utilisation du teslamètre a permis de montrer que l'intensité du champ magnétique est proportionnelle au courant $I$ et inversement proportionnelle à la distance $d$.")
     
-    st.latex(r"B = \frac{\mu_0 \cdot I}{2 \pi \cdot d}")
-    st.markdown("""
-    L'intensité du champ magnétique est :
-    - Strictement proportionnelle à l'intensité du courant $I$.
-    - Inversement proportionnelle à la distance $d$ au fil conducteur.
-    """)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.latex(r"B = \frac{\mu_0 \cdot I}{2 \pi \cdot d}")
+    with col2:
+        st.write("- **$B$** : Intensité en Tesla (T)")
+        st.write("- **$I$** : Courant en Ampère (A)")
+        st.write("- **$d$** : Distance en mètre (m)")
+        st.write("- **$\mu_0$** : Perméabilité du vide ($4\pi \times 10^{-7}$ S.I.)")
