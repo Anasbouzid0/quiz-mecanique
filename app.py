@@ -34,8 +34,11 @@ with st.sidebar:
     st.subheader("📊 Teslamètre Virtuel")
     B_calc = (MU_0 * abs(I)) / (2 * np.pi * d_m)
     st.metric(label=f"Intensité de B à {d_cm} cm", value=f"{B_calc * 1e6:.1f} µT")
+    st.caption("Auteur : Anas BOUZID - Lycée Ibn Batouta")
 
 # --- FONCTIONS DE SIMULATION ---
+# La gestion des figures est isolée pour éviter les conflits de mémoire Streamlit/Matplotlib
+
 def plot_oersted(I_val, distance_m):
     """Génère la visualisation de l'expérience d'Oersted avec la boussole."""
     fig, ax = plt.subplots(figsize=(6, 6))
@@ -104,7 +107,7 @@ def plot_quantitative():
     I_vals = np.linspace(0, 30, 100)
     B_I_vals = (MU_0 * I_vals) / (2 * np.pi * 0.05) * 1e6 
     ax1.plot(I_vals, B_I_vals, color='blue', linewidth=2)
-    ax1.set_title("Intensité du champ B en fonction de I (d = 5 cm)")
+    ax1.set_title("Intensité du champ B en fonction de I")
     ax1.set_xlabel("Courant I (A)")
     ax1.set_ylabel("Champ B (µT)")
     ax1.grid(True)
@@ -113,12 +116,12 @@ def plot_quantitative():
     inv_d = 1 / d_vals
     B_d_vals = (MU_0 * 15.0) / (2 * np.pi * d_vals) * 1e6 
     ax2.plot(inv_d, B_d_vals, color='red', linewidth=2)
-    ax2.set_title("Intensité du champ B en fonction de 1/d (I = 15 A)")
+    ax2.set_title("Intensité du champ B en fonction de 1/d")
     ax2.set_xlabel("1/d (m⁻¹)")
     ax2.set_ylabel("Champ B (µT)")
     ax2.grid(True)
     
-    plt.tight_layout()
+    fig.tight_layout()
     return fig
 
 # --- ORGANISATION EN ONGLETS ---
@@ -129,9 +132,8 @@ with tab1:
     with col1:
         st.subheader("Observation de l'aiguille aimantée")
         st.markdown("Placez une boussole à proximité d'un fil rectiligne aligné sur le méridien terrestre. Faites varier l'intensité $I$.")
-        fig1 = plot_oersted(I, d_m)
-        st.pyplot(fig1)
-        plt.close(fig1) # <-- CORRECTION DE L'ERREUR ICI
+        fig_oersted = plot_oersted(I, d_m)
+        st.pyplot(fig_oersted)
     with col2:
         st.subheader("Exploitation")
         with st.expander("Q1. Que se passe-t-il lorsque le courant circule ?"):
@@ -145,9 +147,8 @@ with tab2:
     with col1:
         st.subheader("Topographie de $\\vec{B}$ (Limaille de fer)")
         st.markdown("Visualisation dans un plan perpendiculaire au fil conducteur.")
-        fig2 = plot_spectre(I)
-        st.pyplot(fig2)
-        plt.close(fig2) # <-- CORRECTION DE L'ERREUR ICI
+        fig_spectre = plot_spectre(I)
+        st.pyplot(fig_spectre)
     with col2:
         st.subheader("Exploitation")
         st.write("L'expérience de la limaille de fer permet de visualiser les lignes de champ.")
@@ -161,9 +162,8 @@ with tab2:
 with tab3:
     st.subheader("Vérification de la loi de Biot et Savart")
     st.markdown("L'utilisation d'une sonde de Hall permet d'établir les relations de proportionnalité.")
-    fig3 = plot_quantitative()
-    st.pyplot(fig3)
-    plt.close(fig3) # <-- CORRECTION DE L'ERREUR ICI
+    fig_quant = plot_quantitative()
+    st.pyplot(fig_quant)
     
     st.latex(r"B = \frac{\mu_0 \cdot I}{2 \pi \cdot d}")
     st.markdown("""
