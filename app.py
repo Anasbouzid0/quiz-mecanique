@@ -1,171 +1,177 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import matplotlib.transforms as transforms
 
-# --- Configuration ---
-st.set_page_config(page_title="Mécanique de Newton", layout="wide")
-st.title("📐 Dynamique d'un Solide : 2ème Loi de Newton")
+# --- CONFIGURATION DE LA PAGE ---
+st.set_page_config(
+    page_title="Étude du Champ Magnétique - Fil Rectiligne",
+    page_icon="🧲",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# --- Interface Utilisateur (Sidebar) ---
-st.sidebar.header("Configuration de l'Étude")
+# --- CONSTANTES PHYSIQUES ---
+MU_0 = 4 * np.pi * 1e-7  # Perméabilité magnétique du vide (T.m/A)
+B_TERRE = 2e-5           # Composante horizontale du champ terrestre (~20 µT)
 
-# 1. Choix du plan
-mode_plan = st.sidebar.radio("Type de mouvement", ["Plan Horizontal", "Plan Incliné"])
+# --- EN-TÊTE PÉDAGOGIQUE ---
+st.title("🧲 Le champ magnétique créé par un courant électrique")
+st.markdown("""
+**Niveau :** 1ère BAC BIOF | **Séquence :** Le fil conducteur rectiligne
+*Application interactive conçue pour l'exploration de la topographie et de l'intensité du vecteur champ magnétique $\\vec{B}$.*
+""")
+st.divider()
 
-# 2. Choix des frottements
-mode_frottement = st.sidebar.radio("Contact", ["Sans frottement", "Avec frottement"])
-
-st.sidebar.markdown("---")
-st.sidebar.header("Paramètres Physiques")
-
-m = st.sidebar.slider("Masse m (kg)", 1.0, 10.0, 2.0)
-
-# Paramètres conditionnels selon le plan
-if mode_plan == "Plan Incliné":
-    alpha_deg = st.sidebar.slider("Angle d'inclinaison α (°)", 10, 60, 30)
-    F_ext = 0.0 # C'est le poids qui fait descendre le solide
-else:
-    alpha_deg = 0
-    F_ext = st.sidebar.slider("Force de traction F_ext (N)", 0.0, 50.0, 15.0)
-
-# Paramètres conditionnels selon les frottements
-if mode_frottement == "Avec frottement":
-    mu = st.sidebar.slider("Coefficient de frottement μ", 0.05, 0.8, 0.2)
-else:
-    mu = 0.0
-
-t = st.sidebar.slider("Temps de simulation t (s)", 0.0, 5.0, 1.5, step=0.1)
-
-# --- Moteur Physique ---
-g = 9.81
-alpha_rad = np.radians(alpha_deg)
-
-# Composantes du Poids
-P_mag = m * g
-P_x = P_mag * np.sin(alpha_rad)
-P_y = P_mag * np.cos(alpha_rad)
-
-# Calcul des forces selon le cas
-if mode_plan == "Plan Horizontal":
-    Force_motrice = F_ext
-    Rn_mag = P_mag # Sur un plan horizontal, Rn compense P exactement
-else:
-    Force_motrice = P_x
-    Rn_mag = P_y   # Sur un plan incliné, Rn compense Py
-
-# Calcul du frottement cinétique
-f_mag = mu * Rn_mag
-
-# Application de la 2ème loi de Newton : Somme(Fx) = m * a
-F_res = Force_motrice - f_mag
-
-if F_res > 0:
-    a = F_res / m
-else:
-    a = 0
-    F_res = 0
-    f_mag = Force_motrice # En l'absence de mouvement, le frottement statique bloque le solide
-
-# Équation horaire (vitesse initiale nulle)
-distance = 0.5 * a * (t**2)
-
-# --- Affichage des Résultats ---
-col1, col2 = st.columns([1, 2])
-
-with col1:
-    st.subheader("Bilan et Équations")
-    st.markdown(f"**Cas étudié :** {mode_plan}, {mode_frottement.lower()}")
+# --- BARRE LATÉRALE : PARAMÈTRES GLOBAUX ---
+with st.sidebar:
+    st.header("⚙️ Paramètres du Système")
+    st.markdown("Ajustez les grandeurs physiques du circuit :")
+    I = st.slider("Intensité du courant I (A)", min_value=-30.0, max_value=30.0, value=15.0, step=0.5)
+    d_cm = st.slider("Distance de mesure d (cm)", min_value=1.0, max_value=20.0, value=5.0, step=0.5)
+    d_m = d_cm / 100.0  # Conversion SI
     
-    st.latex(r"\sum \vec{F} = m \cdot \vec{a}_{G}")
+    st.divider()
+    st.subheader("📊 Teslamètre Virtuel")
+    B_calc = (MU_0 * abs(I)) / (2 * np.pi * d_m)
+    st.metric(label=f"Intensité de B à {d_cm} cm", value=f"{B_calc * 1e6:.1f} µT")
     
-    if mode_plan == "Plan Horizontal":
-        if mode_frottement == "Sans frottement":
-            st.latex(r"\vec{P} + \vec{R}_n + \vec{F}_{ext} = m \cdot \vec{a}")
-            st.latex(r"a = \frac{F_{ext}}{m}")
-        else:
-            st.latex(r"\vec{P} + \vec{R}_n + \vec{f} + \vec{F}_{ext} = m \cdot \vec{a}")
-            st.latex(r"a = \frac{F_{ext} - f}{m}")
-    else:
-        if mode_frottement == "Sans frottement":
-            st.latex(r"\vec{P} + \vec{R}_n = m \cdot \vec{a}")
-            st.latex(r"a = g \cdot \sin(\alpha)")
-        else:
-            st.latex(r"\vec{P} + \vec{R}_n + \vec{f} = m \cdot \vec{a}")
-            st.latex(r"a = g \cdot \sin(\alpha) - \mu \cdot g \cdot \cos(\alpha)")
+    st.caption("Auteur : Anas BOUZID - Lycée Ibn Batouta")
 
-    st.markdown("---")
-    st.write(f"**Accélération :** {a:.2f} m/s²")
-    st.write(f"**Distance parcourue :** {distance:.2f} m")
-
-# --- Visualisation Graphique Rigoureuse ---
-with col2:
-    fig, ax = plt.subplots(figsize=(10, 6))
+# --- FONCTIONS DE SIMULATION (Moteur Physique) ---
+def plot_oersted(I, d):
+    """Génère la visualisation de l'expérience d'Oersted avec la boussole."""
+    fig, ax = plt.subplots(figsize=(6, 6))
     
-    longueur_plan = 25.0
-    cote_bloc = 2.0
+    # Représentation du fil conducteur (Section)
+    marker = 'o' if I > 0 else 'x'
+    color = 'red' if I > 0 else 'blue'
+    if I == 0: marker, color = 'o', 'gray'
+    ax.plot(0, 0, marker=marker, color=color, markersize=18, markeredgewidth=2, label="Fil (Axe Z)")
     
-    # Géométrie du plan (départ à x=0 en haut)
-    y_haut = longueur_plan * np.sin(alpha_rad)
+    # Calcul des composantes vectorielles au point de la boussole (sur l'axe X)
+    Bx_fil = 0
+    By_fil = (MU_0 * I) / (2 * np.pi * d)
     
-    # Tracer la surface
-    x_surface = [0, longueur_plan * np.cos(alpha_rad)]
-    y_surface = [y_haut, 0]
-    ax.plot(x_surface, y_surface, 'k-', lw=4, label="Support")
+    # Superposition avec le champ terrestre (orienté vers Y positif)
+    Bx_res = Bx_fil
+    By_res = By_fil + B_TERRE
     
-    # Position exacte du Centre de Masse (G) pour que le bloc soit posé SUR la surface
-    x_c = distance * np.cos(alpha_rad) + (cote_bloc / 2) * np.sin(alpha_rad)
-    y_c = y_haut - distance * np.sin(alpha_rad) + (cote_bloc / 2) * np.cos(alpha_rad)
+    # Normalisation du vecteur résultant pour l'affichage de l'aiguille
+    norm = np.sqrt(Bx_res**2 + By_res**2)
+    dir_x, dir_y = (Bx_res/norm, By_res/norm) if norm > 0 else (0, 1)
     
-    # Vérification de fin de piste
-    if distance > longueur_plan:
-        st.warning("Le solide a quitté le plan étudié.")
-        distance = longueur_plan
-        x_c = longueur_plan * np.cos(alpha_rad) + (cote_bloc / 2) * np.sin(alpha_rad)
-        y_c = 0 + (cote_bloc / 2) * np.cos(alpha_rad)
-
-    # Tracer le solide
-    rect = patches.Rectangle(
-        (x_c - cote_bloc/2, y_c - cote_bloc/2), cote_bloc, cote_bloc,
-        angle=np.degrees(-alpha_rad),
-        color='cornflowerblue', alpha=0.8
-    )
+    # Tracé de la boussole
+    L = 0.02
+    ax.quiver(d, 0, dir_x, dir_y, color='red', scale=1, scale_units='xy', angles='xy', width=0.015, label="Pôle Nord")
+    ax.quiver(d, 0, -dir_x, -dir_y, color='blue', scale=1, scale_units='xy', angles='xy', width=0.015, label="Pôle Sud")
+    ax.add_patch(plt.Circle((d, 0), L*1.2, color='gray', fill=False, linestyle='--'))
     
-    t_start = ax.transData
-    t_rot = transforms.Affine2D().rotate_deg_around(x_c, y_c, -alpha_deg)
-    rect.set_transform(t_rot + t_start)
-    ax.add_patch(rect)
-    
-    # Centre d'inertie (G)
-    ax.plot(x_c, y_c, 'ro', markersize=6, label="Centre de masse (G)")
-    
-    # --- Vecteurs depuis G ---
-    ech = 0.1 # Échelle des vecteurs
-    
-    # 1. Poids (P) - Toujours vertical vers le bas
-    ax.quiver(x_c, y_c, 0, -P_mag * ech, angles='xy', scale_units='xy', scale=1, color='green', width=0.006, label="Poids (P)")
-    
-    # 2. Réaction Normale (Rn) - Perpendiculaire à la surface
-    Rn_dx = Rn_mag * np.sin(alpha_rad) * ech
-    Rn_dy = Rn_mag * np.cos(alpha_rad) * ech
-    ax.quiver(x_c, y_c, Rn_dx, Rn_dy, angles='xy', scale_units='xy', scale=1, color='red', width=0.006, label="Réaction (Rn)")
-    
-    # 3. Force de traction (F_ext) - Cas horizontal uniquement
-    if mode_plan == "Plan Horizontal" and F_ext > 0:
-        ax.quiver(x_c, y_c, F_ext * ech, 0, angles='xy', scale_units='xy', scale=1, color='purple', width=0.006, label="Traction (F_ext)")
-        
-    # 4. Frottement (f) - Opposé au mouvement
-    if mode_frottement == "Avec frottement" and f_mag > 0:
-        f_dx = -f_mag * np.cos(alpha_rad) * ech
-        f_dy = f_mag * np.sin(alpha_rad) * ech
-        ax.quiver(x_c, y_c, f_dx, f_dy, angles='xy', scale_units='xy', scale=1, color='orange', width=0.006, label="Frottements (f)")
-
-    # Formatage de la figure
+    # Esthétique
+    ax.set_xlim(-0.1, max(0.1, d + 0.05))
+    ax.set_ylim(-0.1, 0.1)
     ax.set_aspect('equal')
-    ax.set_xlim(-2, longueur_plan * np.cos(alpha_rad) + 5)
-    ax.set_ylim(-2, y_haut + 5)
-    ax.legend(loc='upper right', bbox_to_anchor=(1.3, 1))
-    ax.axis('off')
+    ax.grid(True, linestyle=':', alpha=0.7)
+    ax.set_xlabel("x (m)")
+    ax.set_ylabel("y (m)")
+    ax.legend(loc='upper left')
+    return fig
+
+def plot_spectre(I):
+    """Génère la topographie du champ magnétique (Limaille de fer)."""
+    fig, ax = plt.subplots(figsize=(6, 6))
+    x = np.linspace(-0.1, 0.1, 40)
+    y = np.linspace(-0.1, 0.1, 40)
+    X, Y = np.meshgrid(x, y)
     
-    st.pyplot(fig)
+    r_carre = X**2 + Y**2
+    r_carre[r_carre == 0] = 1e-10 # Singularité centrale
+    
+    Bx = - (MU_0 * I / (2 * np.pi)) * (Y / r_carre)
+    By =   (MU_0 * I / (2 * np.pi)) * (X / r_carre)
+    B_norm = np.sqrt(Bx**2 + By**2)
+    
+    ax.streamplot(X, Y, Bx, By, color=B_norm, cmap='viridis', linewidth=1.5, density=1.5, arrowsize=1.5)
+    
+    marker = 'o' if I > 0 else 'x'
+    color = 'red' if I > 0 else 'blue'
+    if I == 0: marker, color = 'o', 'gray'
+    ax.plot(0, 0, marker=marker, color=color, markersize=15, markeredgewidth=2)
+    
+    ax.set_xlim(-0.1, 0.1)
+    ax.set_ylim(-0.1, 0.1)
+    ax.set_aspect('equal')
+    ax.grid(True, linestyle=':', alpha=0.7)
+    ax.set_xlabel("x (m)")
+    ax.set_ylabel("y (m)")
+    return fig
+
+def plot_quantitative():
+    """Génère les courbes d'analyse B=f(I) et B=f(1/d)."""
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    
+    # Courbe B = f(I) à distance fixe
+    I_vals = np.linspace(0, 30, 100)
+    B_I_vals = (MU_0 * I_vals) / (2 * np.pi * 0.05) * 1e6 # en µT pour d=5cm
+    ax1.plot(I_vals, B_I_vals, color='blue', linewidth=2)
+    ax1.set_title("Intensité B en fonction du courant I (d = 5 cm)")
+    ax1.set_xlabel("Courant I (A)")
+    ax1.set_ylabel("Champ B (µT)")
+    ax1.grid(True)
+    
+    # Courbe B = f(1/d) à courant fixe
+    d_vals = np.linspace(0.01, 0.20, 100)
+    inv_d = 1 / d_vals
+    B_d_vals = (MU_0 * 15.0) / (2 * np.pi * d_vals) * 1e6 # en µT pour I=15A
+    ax2.plot(inv_d, B_d_vals, color='red', linewidth=2)
+    ax2.set_title("Intensité B en fonction de 1/d (I = 15 A)")
+    ax2.set_xlabel("1/d (m⁻¹)")
+    ax2.set_ylabel("Champ B (µT)")
+    ax2.grid(True)
+    
+    plt.tight_layout()
+    return fig
+
+# --- ORGANISATION EN ONGLETS (Séquences Pédagogiques) ---
+tab1, tab2, tab3 = st.tabs(["🧭 1. Expérience d'Oersted", "🌌 2. Spectre Magnétique", "📈 3. Étude Quantitative"])
+
+with tab1:
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        st.subheader("Observation de l'aiguille aimantée")
+        st.markdown("Placez une boussole à proximité d'un fil rectiligne aligné sur le méridien terrestre. Faites varier l'intensité $I$ dans le panneau latéral.")
+        st.pyplot(plot_oersted(I, d_m))
+    with col2:
+        st.subheader("Exploitation")
+        with st.expander("Q1. Que se passe-t-il lorsque le courant circule ?"):
+            st.write("L'aiguille pivote et tend à se placer perpendiculairement au fil conducteur.")
+        with st.expander("Q2. Quel est l'effet de l'inversion des bornes ?"):
+            st.write("Le sens du courant s'inverse ($I$ devient négatif), l'aiguille subit une rotation de $180^\\circ$. Le sens du champ magnétique dépend du sens du courant.")
+        st.info("💡 **Règle de la main droite :** Le pouce pointe dans le sens de $I$, les doigts s'enroulent dans le sens de $\\vec{B}$.")
+
+with tab2:
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        st.subheader("Topographie de $\\vec{B}$ (Limaille de fer)")
+        st.markdown("Visualisation dans un plan perpendiculaire au fil conducteur.")
+        st.pyplot(plot_spectre(I))
+    with col2:
+        st.subheader("Exploitation")
+        st.write("L'expérience de la limaille de fer permet de visualiser les lignes de champ.")
+        with st.expander("Analyse du spectre :"):
+            st.markdown("""
+            * **Forme :** Les lignes de champ sont des cercles concentriques.
+            * **Sens :** Donné par la règle du bonhomme d'Ampère ou du tire-bouchon de Maxwell.
+            * **Intensité :** Plus les lignes sont resserrées (couleur claire sur la simulation), plus l'intensité du champ magnétique est forte.
+            """)
+
+with tab3:
+    st.subheader("Vérification de la loi de Biot et Savart")
+    st.markdown("L'utilisation d'une sonde de Hall (Teslamètre) permet d'établir les relations de proportionnalité.")
+    st.pyplot(plot_quantitative())
+    
+    st.latex(r"B = \frac{\mu_0 \cdot I}{2 \pi \cdot d}")
+    st.markdown("""
+    L'intensité du champ magnétique $\\vec{B}$ est :
+    - Strictement proportionnelle à l'intensité du courant $I$.
+    - Inversement proportionnelle à la distance $d$ au fil conducteur.
+    """)
